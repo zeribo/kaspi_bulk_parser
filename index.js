@@ -11,7 +11,7 @@ const MAX_PAGES = 10;
 // 2. PASTE YOUR CATEGORY LINKS HERE
 const CATEGORY_URLS = [
     'https://kaspi.kz/yml/product-view/pl/results?page=1&q=%3Acategory%3AChild%20goods%3AavailableInZones%3AMagnum_ZONE1&text&sort=relevance&qs&requestId=456805b252b33b8dfd18b4a39ca0ebf7&ui=d&i=-1&c=750000000',
-    'https://kaspi.kz/yml/product-view/pl/results?page=1&q=%3Acategory%3ASmartphones%20and%20gadgets%3AavailableInZones%3AMagnum_ZONE1&text&sort=relevance&qs&requestId=d47e85d1cf90960eb88139ee80ec3f47&ui=d&i=-1&c=750000000',
+    /*'https://kaspi.kz/yml/product-view/pl/results?page=1&q=%3Acategory%3ASmartphones%20and%20gadgets%3AavailableInZones%3AMagnum_ZONE1&text&sort=relevance&qs&requestId=d47e85d1cf90960eb88139ee80ec3f47&ui=d&i=-1&c=750000000',
     'https://kaspi.kz/yml/product-view/pl/results?page=1&q=%3Acategory%3AHome%20equipment%3AavailableInZones%3AMagnum_ZONE1&text&sort=relevance&qs&requestId=d9545879440e7b6dc92daf07c2458529&ui=d&i=-1&c=750000000',
     'https://kaspi.kz/yml/product-view/pl/results?page=1&q=%3Acategory%3ATV_Audio%3AavailableInZones%3AMagnum_ZONE1&text&sort=relevance&qs&requestId=4ad0cdc67b7e90f08d12fb778cc30f3a&ui=d&i=-1&c=750000000',
     'https://kaspi.kz/yml/product-view/pl/results?page=1&q=%3Acategory%3AComputers%3AavailableInZones%3AMagnum_ZONE1&text&sort=relevance&qs&requestId=a6bea0a08269e972e228a1be78b2af71&ui=d&i=-1&c=750000000',
@@ -30,10 +30,10 @@ const CATEGORY_URLS = [
     'https://kaspi.kz/yml/product-view/pl/results?page=1&q=%3Acategory%3AGifts%20and%20party%20supplies%3AavailableInZones%3AMagnum_ZONE1&text&sort=relevance&qs&requestId=fb2cc3ed8e59cc2322d93407028396f3&ui=d&i=-1&c=750000000',
     'https://kaspi.kz/yml/product-view/pl/results?page=1&q=%3Acategory%3AOffice%20and%20school%20supplies%3AavailableInZones%3AMagnum_ZONE1&text&sort=relevance&qs&requestId=b4aa8479d57254a7d891383e927aedf0&ui=d&i=-1&c=750000000',
     'https://kaspi.kz/yml/product-view/pl/results?page=1&q=%3Acategory%3APet%20goods%3AavailableInZones%3AMagnum_ZONE1&text&sort=relevance&qs&requestId=2ced373bd9f9b73253e76457742a1912&ui=d&i=-1&c=750000000'
-
+*/
 ];
 
-// 3. TARGET ZONES (Found in the category JSON)
+// 3. TARGET ZONES (Found in category JSON)
 const TARGET_ZONES = [
     "Magnum_ZONE8",
     "magnum_f_zone",
@@ -48,9 +48,6 @@ const OUTPUT_FILE = 'products.json';
 // HELPER FUNCTIONS
 // ==========================================
 
-/**
- * Helper to fetch JSON with proper Headers to avoid 403
- */
 async function fetchJson(browser, url) {
     const page = await browser.newPage();
     try {
@@ -124,8 +121,8 @@ async function startParsing() {
                             name: item.title,
                             brand: item.brand,
                             // Price Logic
-                            regularPrice: item.unitPriceBeforeDiscount || item.unitPrice,
-                            promotionalPrice: (item.unitSalePrice < item.unitPrice) ? item.unitSalePrice : null,
+                            regularPrice: item.unitPrice || 0,
+                            originalPrice: item.unitSalePrice || 0, // promotional price
                             
                             // Image & Link
                             link: `https://kaspi.kz${item.shopLink}`,
@@ -134,10 +131,14 @@ async function startParsing() {
                             // Categories
                             fullCategoryPath: item.category ? item.category.join(' > ') : null,
 
-                            // These fields are often MISSING in the JSON, so we default to null
+                            // Weight
                             weight: item.weight || null, 
-                            description: null, 
-                            countryOfOrigin: null 
+
+                            // NEW FIELDS ADDED HERE:
+                            priceMinusBonus: item.priceMinusBonus || 0,
+                            reviewsQuantity: item.reviewsQuantity || 0,
+                            unitPriceBeforeDiscount: item.unitPriceBeforeDiscount || 0,
+                            discount: item.discount || 0
                         };
 
                         allResults.push(product);
