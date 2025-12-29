@@ -9,7 +9,7 @@ const os = require('os');
 // ==========================================
 const INPUT_SCRAPE_FILE = 'products.json';
 const INPUT_CSV_REFERENCE = 'PRODUCTS_TO_MATCH.csv';
-const OUTPUT_FILE = 'mapped_data.json';
+const OUTPUT_FILE = 'mapped_data.csv';
 const CITY = 'almaty';
 const SOURCE = 'kaspi_parser';
 const NUM_WORKERS = Math.max(1, os.cpus().length - 1); // Leave 1 core free
@@ -316,7 +316,34 @@ const main = async () => {
   const finalData = resultsArrays.flat();
   const matched = finalData.filter(r => r.best_match === 'match').length;
 
-  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(finalData, null, 2), 'utf8');
+  // Write CSV (append if exists)
+  const headers = Object.keys(finalData[0]);
+  const escapeCsv = (val) => {
+    if (val === null || val === undefined) return '';
+    const str = String(val);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  };
+  
+  const fileExists = fs.existsSync(OUTPUT_FILE);
+  const csvLines = [];
+  
+  if (!fileExists) {
+    csvLines.push(headers.join(','));
+  }
+  
+  for (const row of finalData) {
+    csvLines.push(headers.map(h => escapeCsv(row[h])).join(','));
+  }
+  
+  if (fileExists) {
+    fs.appendFileSync(OUTPUT_FILE, '\n' + csvLines.join('\n'), 'utf8');
+    console.log(`\n📎 Appended to existing ${OUTPUT_FILE}`);
+  } else {
+    fs.writeFileSync(OUTPUT_FILE, csvLines.join('\n'), 'utf8');
+  }
 
   console.log(`\n📊 Matched: ${matched}/${finalData.length} (${Math.round(matched/finalData.length*100)}%)`);
   console.log(`📁 Output: ${OUTPUT_FILE}`);
