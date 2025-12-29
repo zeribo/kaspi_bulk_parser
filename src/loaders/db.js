@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path'); // <--- Import path module
+require('dotenv').config(); // Load variables from .env file
 const mongoose = require('mongoose');
 const fs = require('fs');
 
@@ -15,7 +16,10 @@ const MONGO_AUTH_DB = process.env.MONGO_AUTH_DATABASE;
 
 const MONGO_URI = `mongodb://${MONGO_USER}:${MONGO_PASS}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DB}?authSource=${MONGO_AUTH_DB}`;
 
-const INPUT_FILE = './mapped_data.json';
+// IMPORTANT: Calculate path relative to current file (src/loaders/db.js)
+// __dirname = .../kaspi_bulk_parser/src/loaders
+// We want .../kaspi_bulk_parser/mapped_data.json
+const INPUT_FILE = path.join(__dirname, '../../mapped_data.json'); 
 
 // ==========================================
 // SCHEMA DEFINITION
@@ -69,6 +73,7 @@ const Product = mongoose.model('Product', ProductSchema);
 async function loadToMongo() {
     try {
         console.log(`Connecting to MongoDB at ${MONGO_HOST}...`);
+        
         await mongoose.connect(MONGO_URI);
         console.log('Connected successfully.');
 

@@ -8,7 +8,7 @@ const Fuse = require('fuse.js');
 // ==========================================
 const INPUT_SCRAPE_FILE = 'products.json';
 const INPUT_CSV_REFERENCE = 'PRODUCTS_TO_MATCH.csv';
-const OUTPUT_FILE = 'mapped_data.json'; 
+const OUTPUT_FILE = '../../mapped_data.json';
 
 const CITY = 'almaty';
 const SOURCE = 'kaspi_parser';
@@ -19,10 +19,8 @@ const SOURCE = 'kaspi_parser';
 
 const extractWeightFromTitle = (title) => {
     if (!title) return null;
-    // Regex to find: "90 г", "1.2 кг", "0.5л", "50 гр"
     const match = title.match(/(\d+(?:\.\d+)?)\s*(г|кг|мл|л|гр|кгр|млр|лр)/i);
     if (match) {
-        // Clean up the unit (e.g., "гр" -> "г") for consistency
         let unit = match[2];
         if(unit === 'гр') unit = 'г';
         if(unit === 'кгр') unit = 'кг';
@@ -59,7 +57,7 @@ const loadReferenceData = () => {
 
 const loadScrapedData = () => {
     if (!fs.existsSync(INPUT_SCRAPE_FILE)) {
-        console.error('Error: products.json not found. Run the scraper first.');
+        console.error('Error: products.json not found. Run npm run scrape first.');
         process.exit(1);
     }
     return JSON.parse(fs.readFileSync(INPUT_SCRAPE_FILE, 'utf8'));
@@ -79,37 +77,45 @@ const transformData = async () => {
     console.log(`Reference: ${referenceData.length} items. Scraped: ${scrapedData.length} items.`);
     
     // Initialize Fuse.js for fuzzy matching
+    // OPTIMIZATION 1: Stricter threshold = Faster, more accurate search
+    // OPTIMIZATION 2: ignoreLocation = true (Speed boost)
     const fuse = new Fuse(referenceData, {
         keys: ['name', 'name_kk', 'name_origin'],
-        threshold: 0.4, 
-        includeScore: true
+        threshold: 0.3, 
+        includeScore: true,
+        ignoreLocation: true, // Ignores spaces in words
+        shouldSort: true 
     });
 
     const now = new Date().toISOString();
     const finalData = [];
 
     console.log('Matching and transforming...');
-
-    for (const item of scrapedData) {
+    
+    // OPTIMIZATION 3: Progress Indicator
+    for (let i = 0; i < scrapedData.length; i++) {
+        const item = scrapedData[i];
+        
+        // Print progress every 50 items
+        if (i > 0 && i % 50 === 0) {
+            console.log(`   Processing... ${i}/${scrapedData.length}`);
+        }
         
         // 1. Fuzzy Search
-        const searchResults = fuse.search(item.name);
+        // OPTIMIZATION 4: Limit results to 1 (Stop searching after first match - Huge Speedup)
+        const searchResults = fuse.search(item.name, { limit: 1 });
         const bestMatch = searchResults.length > 0 ? searchResults[0].item : null;
         const matchScore = searchResults.length > 0 ? searchResults[0].score : null;
 
-        // 2. Handle Weight Logic (UPDATED PRIORITY)
+        // 2. Handle Weight Logic (Priority 1: Title, 2: CSV, 3: API)
         let weightString = '';
-
-        // PRIORITY 1: Extract from Title (Most accurate for current product)
         const titleWeight = extractWeightFromTitle(item.name);
         
         if (titleWeight) {
             weightString = titleWeight;
         } else if (bestMatch && bestMatch.weight) {
-            // PRIORITY 2: Use CSV Match if title has no weight
             weightString = bestMatch.weight; 
         } else {
-            // PRIORITY 3: Calculate from API numeric weight
             let weightVal = item.weight || 0;
             if (weightVal > 0) {
                 const grams = Math.round(weightVal * 1000);
@@ -124,7 +130,7 @@ const transformData = async () => {
         const originalPrice = item.unitPriceBeforeDiscount || 0; 
         const discount = item.discount || 0; 
         
-        // 4. Construct the Final Object
+        // 4. Construct Final Object
         const record = {
             _id: uuidv4(),
             mercant_id: uuidv4(), 

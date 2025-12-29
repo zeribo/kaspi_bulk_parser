@@ -5,12 +5,12 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "parse": "node index.js",
-    "map": "node mapper.js",
-    "db": "node db.js",
-    "all": "npm run parse && npm run map && npm run db",
+    "scrape": "node src/scrapers/index.js",
+    "map": "node src/mappers/mapper.js",
+    "db": "node src/loaders/db.js",
+    "all": "npm run scrape && npm run map && npm run db",
     "start": "npm run all"
-},
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zeribo/kaspi_bulk_parser.git"

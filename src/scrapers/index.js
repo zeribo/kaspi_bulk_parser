@@ -6,10 +6,7 @@ const { v4: uuidv4 } = require('uuid'); // Needed to generate fresh Request IDs
 // CONFIGURATION
 // ==========================================
 
-// 1. MAX PAGES TO PARSE
-const MAX_PAGES = 10;
-
-// 2. PASTE YOUR CATEGORY LINKS HERE
+// 1. PASTE YOUR CATEGORY LINKS HERE
 // Note: The 'requestId' in these links will be replaced automatically with a fresh one.
 const CATEGORY_URLS = [
     'https://kaspi.kz/yml/product-view/pl/results?page=1&q=%3Acategory%3AChild%20goods%3AavailableInZones%3AMagnum_ZONE1&text&sort=relevance&qs&requestId=456805b252b33b8dfd18b4a39ca0ebf7&ui=d&i=-1&c=750000000',
@@ -74,7 +71,9 @@ async function startParsing() {
             let page = 0;
             let hasProducts = true;
 
-            while (hasProducts && page < MAX_PAGES) {
+            // Removed && page < MAX_PAGES from the condition.
+            // Now it runs as long as there are products on the page.
+            while (hasProducts) {
                 
                 // 1. Update Page Number
                 let paginatedUrl = categoryUrl.replace(/page=\d+/, `page=${page}`);
@@ -90,17 +89,27 @@ async function startParsing() {
                 console.log(`   Fetching Page ${page}...`);
                 
                 // 3. Axios GET Request
-                const response = await axios.get(paginatedUrl, axiosConfig);
+                // Added explicit try-catch block to catch network timeouts
+                let listData;
+                try {
+                    const response = await axios.get(paginatedUrl, axiosConfig);
+                    console.log(`   [DONE] Received response in ${(Date.now() - start).toFixed(0)}ms`); // Added visual feedback
 
-                // Check if request was successful
-                if (response.status !== 200) {
-                    console.error(`   Failed with status ${response.status}. Sleeping for 2s...`);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    page++;
-                    continue; 
+                    // Check if request was successful
+                    if (response.status !== 200) {
+                        console.error(`   Failed with status ${response.status}. Sleeping for 2s...`);
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        page++;
+                        continue; 
+                    }
+
+                    listData = response.data;
+                } catch (err) {
+                    console.error(`   [ERROR] Axios failed: ${err.message}`);
+                    // If timeout or network error, stop processing this category
+                    hasProducts = false;
+                    break;
                 }
-
-                const listData = response.data;
 
                 if (!listData || !listData.data || listData.data.length === 0) {
                     console.log(`   No products found on page ${page}. Moving to next category.`);
