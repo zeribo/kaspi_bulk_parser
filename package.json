@@ -1,15 +1,11 @@
 {
+  "type": "module",
   "name": "kaspi_bulk_parser",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "parse": "node index.js",
-    "map": "node mapper.js",
-    "db": "node db.js",
-    "all": "npm run parse && npm run map && npm run db",
-    "start": "npm run all"
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",
